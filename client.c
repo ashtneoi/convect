@@ -89,12 +89,12 @@ struct sockaddr_in6 get_addr(void) {
 int connect_to_server(struct sockaddr_in6* const addr) {
     int sock = socket(AF_INET6, SOCK_STREAM, 0);
     if (sock == -1) {
-        fatal(E_RARE, "can't create socket");
+        fatal_e(E_RARE, "can't create socket");
     }
     int r = connect(sock, (struct sockaddr*)addr, sizeof(*addr));
     if (r == -1) {
         close(sock); // ignore errors
-        fatal(E_COMMON, "can't connect to server");
+        fatal_e(E_COMMON, "can't connect to server");
     }
     static const size_t HOSTLEN = 1025;
     char* host = malloc(HOSTLEN);
