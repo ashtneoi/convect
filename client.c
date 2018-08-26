@@ -1,7 +1,11 @@
 #include "common.h"
 
+#include <assert.h>
+#include <netdb.h>
+#include <netinet/in.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
 #include "fail.h"
@@ -56,14 +60,48 @@ static struct args get_args(int argc, char** argv)
 }
 
 
+struct sockaddr_in6 get_addr(void) {
+    const struct addrinfo hints = {
+        .ai_flags = AI_ADDRCONFIG | AI_V4MAPPED | AI_NUMERICSERV,
+        .ai_family = AF_INET6,
+        .ai_socktype = SOCK_STREAM,
+        .ai_protocol = 0,
+    };
+    struct addrinfo *res;
+    int r = getaddrinfo("localhost", "7390", &hints, &res);
+    if (r != 0) {
+        const char* desc = gai_strerror(r);
+        fatal(
+            E_RARE,
+            "can't determine server address (%s)",
+            desc
+        );
+    }
+    assert(res != NULL);
+    return *(struct sockaddr_in6*)res->ai_addr;
+}
+
+
+int connect_to_server(struct sockaddr_in6* const addr) {
+    int sock = socket(AF_INET6, SOCK_STREAM, 0);
+    if (sock == -1) {
+        fatal(E_RARE, "can't create socket");
+    }
+    int r = connect(sock, (struct sockaddr*)addr, sizeof(*addr));
+    if (r == -1) {
+        close(sock); // ignore errors
+        fatal(E_COMMON, "can't connect to server");
+    }
+    return sock;
+}
+
+
 int main(int argc, char** argv)
 {
     struct args args = get_args(argc, argv);
     (void)args;
 
-    v0("Verbosity is at least 0.");
-    v1("Verbosity is at least 1.");
-    v2("Verbosity is at least 2.");
-    warning("This is a warning.");
-    fatal(E_COMMON, "This is an error.");
+    struct sockaddr_in6 client_addr = get_addr();
+
+    int sock = connect_to_server(&client_addr);
 }
