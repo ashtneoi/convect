@@ -78,7 +78,9 @@ struct sockaddr_in6 get_addr(void) {
         );
     }
     assert(res != NULL);
-    return *(struct sockaddr_in6*)res->ai_addr;
+    struct sockaddr_in6 addr = *(struct sockaddr_in6*)res->ai_addr;
+    freeaddrinfo(res);
+    return addr;
 }
 
 
@@ -104,4 +106,5 @@ int main(int argc, char** argv)
     struct sockaddr_in6 client_addr = get_addr();
 
     int sock = connect_to_server(&client_addr);
+    close(sock); // ignore errors
 }
