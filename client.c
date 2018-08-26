@@ -136,24 +136,41 @@ size_t my_strncpy(char* dest, const char* src, size_t dest_cap) {
 }
 
 
+ssize_t send_all(int sockfd, const char* buf, size_t len, int flags) {
+    ssize_t count;
+    ssize_t count_total = 0;
+    const char* buf_end = buf + len;
+    while (buf < buf_end) {
+        count = send(sockfd, buf, buf_end - buf, flags);
+        if (count == -1) {
+            if (count_total > 0) {
+                return count_total; // TODO: this might be unsafe in general
+            } else {
+                return -1;
+            }
+        }
+        count_total += count;
+        buf += count;
+    }
+    return count_total;
+}
+
+
 void set_name(int sock, const char* name) {
     const char* name_end = name; // first NUL in name
     while (*name_end != 0) {
         ++name_end;
     }
     assert(*name_end == 0);
+    size_t name_len = name_end - name;
     char cmd = 'N';
     ssize_t count = send(sock, &cmd, 1, MSG_MORE);
     if (count == -1) {
         fatal_e(E_COMMON, "can't set name");
     }
-    while (name < name_end) {
-        count = send(sock, name, name_end - name, MSG_MORE);
-        if (count == -1) {
-            fatal_e(E_COMMON, "can't set name");
-        }
-        assert(count != 0);
-        name += count;
+    count = send_all(sock, name, name_len, MSG_MORE);
+    if (count < (ssize_t)name_len) {
+        fatal_e(E_COMMON, "can't set name");
     }
     char term = 0;
     count = write(sock, &term, 1);
