@@ -2,4 +2,6 @@
 ~*
 *.o
 
-/prog
+/build.toml
+/client
+/server
