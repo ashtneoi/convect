@@ -6,7 +6,7 @@ MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 .PHONY: all clean
 
 
-EXE := prog
+EXE := server client
 SRC := $(EXE:%=%.c) fail.c
 
 OBJ := $(SRC:%.c=%.o)
@@ -31,6 +31,8 @@ clean:
 
 
 fail.o: common.h fail.h
-prog.o: common.h fail.h
+server.o: common.h fail.h
+client.o: common.h fail.h
 
-prog: fail.o
+server: fail.o
+client: fail.o
