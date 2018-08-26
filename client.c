@@ -73,11 +73,10 @@ struct sockaddr_in6 get_addr(void) {
     struct addrinfo *res;
     int r = getaddrinfo("localhost", PORT_STR, &hints, &res);
     if (r != 0) {
-        const char* desc = gai_strerror(r);
         fatal(
             E_RARE,
             "can't determine server address (%s)",
-            desc
+            gai_strerror(r)
         );
     }
     assert(res != NULL);
@@ -97,6 +96,24 @@ int connect_to_server(struct sockaddr_in6* const addr) {
         close(sock); // ignore errors
         fatal(E_COMMON, "can't connect to server");
     }
+    static const size_t HOSTLEN = 1025;
+    char* host = malloc(HOSTLEN);
+    assert(host != NULL);
+    r = getnameinfo(
+        (struct sockaddr*)addr, sizeof(*addr),
+        host, HOSTLEN,
+        NULL, 0,
+        NI_NUMERICHOST | NI_NUMERICSERV
+    );
+    if (r != 0) {
+        fatal(
+            E_RARE,
+            "can't determine server address (%s)",
+            gai_strerror(r)
+        );
+    }
+    v1("Connected to host %s on port %s", host, PORT_STR);
+    free(host);
     return sock;
 }
 

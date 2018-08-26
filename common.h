@@ -1,7 +1,7 @@
 #pragma once
 
 
-#define _POSIX_C_SOURCE 200112L
+#define _POSIX_C_SOURCE 201112L
 
 
 #define E_COMMON 1
