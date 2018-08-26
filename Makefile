@@ -6,6 +6,9 @@ MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 .PHONY: all clean
 
 
+DEBUG := $(filter true,$(shell shtoml build.toml debug))
+STRICT := $(filter true,$(shell shtoml build.toml strict))
+
 EXE := server client
 SRC := $(EXE:%=%.c) fail.c
 
