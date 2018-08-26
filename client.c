@@ -13,6 +13,9 @@
 
 int verbosity = 0;
 
+static const unsigned int PORT = 7390;
+static const char* const PORT_STR = "7390";
+
 
 struct args {
     int dummy;
@@ -68,7 +71,7 @@ struct sockaddr_in6 get_addr(void) {
         .ai_protocol = 0,
     };
     struct addrinfo *res;
-    int r = getaddrinfo("localhost", "7390", &hints, &res);
+    int r = getaddrinfo("localhost", PORT_STR, &hints, &res);
     if (r != 0) {
         const char* desc = gai_strerror(r);
         fatal(
