@@ -157,12 +157,7 @@ ssize_t send_all(int sockfd, const char* buf, size_t len, int flags) {
 
 
 void set_name(int sock, const char* name) {
-    const char* name_end = name; // first NUL in name
-    while (*name_end != 0) {
-        ++name_end;
-    }
-    assert(*name_end == 0);
-    size_t name_len = name_end - name;
+    size_t name_len = strlen(name);
     char cmd = 'N';
     ssize_t count = send(sock, &cmd, 1, MSG_MORE);
     if (count == -1) {
