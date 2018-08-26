@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -118,6 +119,50 @@ int connect_to_server(struct sockaddr_in6* const addr) {
 }
 
 
+// TODO: actually test this
+// also idk if it's useful at all
+size_t my_strncpy(char* dest, const char* src, size_t dest_cap) {
+    const char* orig_dest = dest;
+    const char* dest_end = dest + dest_cap;
+    while (dest < dest_end) {
+        *dest = *src;
+        ++dest;
+        if (*src == 0) {
+            break;
+        }
+        ++src;
+    }
+    return dest - orig_dest;
+}
+
+
+void set_name(int sock, const char* name) {
+    const char* name_end = name; // first NUL in name
+    while (*name_end != 0) {
+        ++name_end;
+    }
+    assert(*name_end == 0);
+    char cmd = 'N';
+    ssize_t count = send(sock, &cmd, 1, MSG_MORE);
+    if (count == -1) {
+        fatal_e(E_COMMON, "can't set name");
+    }
+    while (name < name_end) {
+        count = send(sock, name, name_end - name, MSG_MORE);
+        if (count == -1) {
+            fatal_e(E_COMMON, "can't set name");
+        }
+        assert(count != 0);
+        name += count;
+    }
+    char term = 0;
+    count = write(sock, &term, 1);
+    if (count == -1) {
+        fatal_e(E_COMMON, "can't set name");
+    }
+}
+
+
 int main(int argc, char** argv)
 {
     struct args args = get_args(argc, argv);
@@ -126,5 +171,6 @@ int main(int argc, char** argv)
     struct sockaddr_in6 client_addr = get_addr();
 
     int sock = connect_to_server(&client_addr);
+    set_name(sock, "ashtneoi");
     close(sock); // ignore errors
 }
