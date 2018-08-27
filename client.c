@@ -15,7 +15,7 @@
 int verbosity = 0;
 
 static const unsigned int PORT = 7390;
-static const char* const PORT_STR = "7390";
+static const char PORT_STR[] = "7390";
 
 
 struct args {
@@ -144,7 +144,7 @@ ssize_t send_all(int sockfd, const char* buf, size_t len, int flags) {
         count = send(sockfd, buf, buf_end - buf, flags);
         if (count == -1) {
             if (count_total > 0) {
-                return count_total; // TODO: this might be unsafe in general
+                return count_total; // TODO: this might be unsafe in some cases
             } else {
                 return -1;
             }
@@ -156,22 +156,73 @@ ssize_t send_all(int sockfd, const char* buf, size_t len, int flags) {
 }
 
 
-void set_name(int sock, const char* name) {
-    size_t name_len = strlen(name);
-    char cmd = 'N';
+void send_cmd(int sock, char cmd, const char* arg, const char* action) {
+    size_t arg_len = strlen(arg);
     ssize_t count = send(sock, &cmd, 1, MSG_MORE);
     if (count == -1) {
-        fatal_e(E_COMMON, "can't set name");
+        fatal_e(E_COMMON, "can't %s", action);
     }
-    count = send_all(sock, name, name_len, MSG_MORE);
-    if (count < (ssize_t)name_len) {
-        fatal_e(E_COMMON, "can't set name");
+    count = send_all(sock, arg, arg_len, MSG_MORE);
+    if (count < (ssize_t)arg_len) {
+        fatal_e(E_COMMON, "can't %s", action);
     }
-    char term = 0;
-    count = write(sock, &term, 1);
+    char end = 0;
+    count = write(sock, &end, 1);
     if (count == -1) {
-        fatal_e(E_COMMON, "can't set name");
+        fatal_e(E_COMMON, "can't %s", action);
     }
+}
+
+
+void set_name(int sock, const char* name) {
+    send_cmd(sock, 'N', name, "set name");
+}
+
+
+void set_tag(int sock, const char* tag) {
+    send_cmd(sock, 'T', tag, "set tag");
+}
+
+
+void send_message(int sock, const char* msg) {
+    send_cmd(sock, 'M', msg, "send message");
+}
+
+
+void ui_loop(int sock) {
+    static const size_t INPUT_BUF_CAP = 1024;
+    char* input_buf = malloc(INPUT_BUF_CAP);
+    while (true) {
+        const char* r = fgets(input_buf, INPUT_BUF_CAP, stdin);
+        if (r == NULL) {
+            if (feof(stdin)) { // probably ^D
+                break;
+            }
+            fatal(E_COMMON, "can't read from stdin");
+        }
+        size_t input_buf_len = strlen(input_buf);
+        if (input_buf[input_buf_len - 1] != '\n') {
+            fatal_e(E_COMMON, "input line too long or unexpected NUL");
+        }
+        input_buf[input_buf_len - 1] = 0; // strip newline
+
+        static const char NAME_CMD[] = "/name ";
+        static const size_t NAME_CMD_LEN = sizeof(NAME_CMD) - 1;
+
+        static const char TAG_CMD[] = "/tag ";
+        static const size_t TAG_CMD_LEN = sizeof(TAG_CMD) - 1;
+
+        if (strncmp(input_buf, NAME_CMD, NAME_CMD_LEN) == 0) {
+            char* name = input_buf + NAME_CMD_LEN;
+            set_name(sock, name);
+        } else if (strncmp(input_buf, TAG_CMD, TAG_CMD_LEN) == 0) {
+            char* tag = input_buf + TAG_CMD_LEN;
+            set_tag(sock, tag);
+        } else {
+            send_message(sock, input_buf);
+        }
+    }
+    free(input_buf);
 }
 
 
@@ -183,6 +234,6 @@ int main(int argc, char** argv)
     struct sockaddr_in6 client_addr = get_addr();
 
     int sock = connect_to_server(&client_addr);
-    set_name(sock, "ashtneoi");
+    ui_loop(sock);
     close(sock); // ignore errors
 }
